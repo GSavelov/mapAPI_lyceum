@@ -40,7 +40,12 @@ class BigMap:
         self.image = pygame.image.load(image)
 
     def event_handler(self, event):
-        pass
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_PAGEUP:
+                self.z = min(self.z + 1, 21)
+            if event.key == pygame.K_PAGEDOWN:
+                self.z = max(self.z - 1, 0)
+            self.update_map()
 
     def draw(self, surf):
         surf.blit(self.image, (0, 0))
