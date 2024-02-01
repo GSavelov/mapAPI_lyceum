@@ -24,14 +24,14 @@ def load_image(name, colorkey=None):
 class BigMap:
     def __init__(self):
         self.image = None
-        self.ll = 60.153191, 55.156353
+        self.lon, self.lat = 60.153191, 55.156353
         self.layer = 'map'
-        self.z = 17
+        self.z = 3
         self.update_map()
 
     def update_map(self):
         map_params = {
-            "ll": ",".join(map(str, self.ll)),
+            "ll": ",".join(map(str, (self.lon, self.lat))),
             'z': self.z,
             "l": "map",
             'size': '650,450'
@@ -45,6 +45,14 @@ class BigMap:
                 self.z = min(self.z + 1, 21)
             if event.key == pygame.K_PAGEDOWN:
                 self.z = max(self.z - 1, 0)
+            if event.key == pygame.K_LEFT:
+                self.lon = (self.lon + 180 - 200 * 2 ** (-self.z)) % 360 - 180
+            if event.key == pygame.K_RIGHT:
+                self.lon = (self.lon + 180 + 200 * 2 ** (-self.z)) % 360 - 180
+            if event.key == pygame.K_UP:
+                self.lat = min(self.lat + 70 * 2 ** (-self.z), 90)
+            if event.key == pygame.K_DOWN:
+                self.lat = max(self.lat - 70 * 2 ** (-self.z), -90)
             self.update_map()
 
     def draw(self, surf):
