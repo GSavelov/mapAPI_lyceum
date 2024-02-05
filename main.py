@@ -31,6 +31,8 @@ class BigMap:
         self.image = None
         self.lon, self.lat = get_toponym_coord(get_toponym(geocode('Миасс')))
         self.point = None
+        self.postal = True
+        self.address = None
         self.layer = 'map'
         self.z = 17
 
@@ -38,9 +40,11 @@ class BigMap:
         self.layers_select = (
             pygame_gui.elements.UIDropDownMenu(self.options, self.options[0], pygame.Rect(10, 10, 200, 30),
                                                self.manager))
-        self.search_field = pygame_gui.elements.UITextEntryLine(pygame.Rect(150, 410, 300, 30), self.manager)
-        self.error_field = pygame_gui.elements.UILabel(pygame.Rect(100, 380, 450, 30), '', self.manager)
-        self.clear_button = pygame_gui.elements.UIButton(pygame.Rect(420, 410, 100, 30), 'Сброс', self.manager)
+        self.search_field = pygame_gui.elements.UITextEntryLine(pygame.Rect(130, 410, 300, 30), self.manager)
+        self.result_field = pygame_gui.elements.UILabel(pygame.Rect(20, 380, 610, 30), '', self.manager)
+        self.clear_button = pygame_gui.elements.UIButton(pygame.Rect(430, 410, 100, 30), 'Сброс', self.manager)
+        self.postal_button = pygame_gui.elements.UIButton(pygame.Rect(530, 410, 100, 30), 'Скрыть', self.manager)
+        self.postal_button.hide()
         self.update_map()
 
     def update_map(self):
@@ -70,17 +74,28 @@ class BigMap:
             if event.key == pygame.K_DOWN:
                 self.lat = max(self.lat - 70 * 2 ** (-self.z), -90)
             if event.key == pygame.K_RETURN:
-                text = self.search_field.get_text()
-                if self.search_field.is_focused and text:
-                    try:
-                        self.lon, self.lat = get_toponym_coord(get_toponym(geocode(text)))
-                        self.error_field.set_text('')
-                        self.point = self.lon, self.lat
-                    except IndexError:
-                        self.error_field.set_text("Ничего не найдено")
+                self.search()
             if event.key in KEYS:
                 self.update_map()
         self.manager.process_events(event)
+
+    def search(self):
+        text = self.search_field.get_text()
+        if self.search_field.is_focused and text:
+            try:
+                toponym = get_toponym(geocode(text))
+                self.lon, self.lat = get_toponym_coord(toponym)
+                self.address = get_toponym_address(toponym)
+                self.result_field.set_text(
+                    f'{self.address[1]}, {self.address[0]}' if self.address[1] else self.address[0])
+                self.postal_button.show()
+                self.point = self.lon, self.lat
+            except IndexError:
+                self.result_field.set_text("Ничего не найдено")
+                self.point = None
+                self.address = None
+                self.postal_button.hide()
+                self.search_field.focus()
 
     def gui_event_handler(self, event):
         if event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
@@ -90,10 +105,23 @@ class BigMap:
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.clear_button:
                 self.clear_search()
+            if event.ui_element == self.postal_button and self.address:
+                self.switch_postal()
+
+    def switch_postal(self):
+        self.postal = not self.postal
+        self.postal_button.set_text("Скрыть" if self.postal else 'Показать')
+        if self.postal:
+            self.result_field.set_text(f'{self.address[1]}, {self.address[0]}' if self.address[1] else self.address[0])
+        else:
+            self.result_field.set_text(self.address[0])
 
     def clear_search(self):
         self.point = None
+        self.address = None
         self.search_field.set_text('')
+        self.result_field.set_text('')
+        self.postal_button.hide()
         self.update_map()
 
     def draw(self, surf):
