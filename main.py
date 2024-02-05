@@ -3,7 +3,9 @@ import sys
 from io import BytesIO
 import pygame
 import pygame_gui
-from api_lib import get_static
+from api_lib import *
+
+KEYS = (pygame.K_PAGEUP, pygame.K_PAGEDOWN, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_RETURN)
 
 
 def load_image(name, colorkey=None):
@@ -27,7 +29,8 @@ class BigMap:
 
     def __init__(self):
         self.image = None
-        self.lon, self.lat = 60.153191, 55.156353
+        self.lon, self.lat = get_toponym_coord(get_toponym(geocode('Миасс')))
+        self.point = None
         self.layer = 'map'
         self.z = 17
 
@@ -35,15 +38,19 @@ class BigMap:
         self.layers_select = (
             pygame_gui.elements.UIDropDownMenu(self.options, self.options[0], pygame.Rect(10, 10, 200, 30),
                                                self.manager))
+        self.search_field = pygame_gui.elements.UITextEntryLine(pygame.Rect(175, 420, 300, 30), self.manager)
+        self.error_field = pygame_gui.elements.UILabel(pygame.Rect(100, 380, 450, 30), '', self.manager)
         self.update_map()
 
     def update_map(self):
         map_params = {
             "ll": ",".join(map(str, (self.lon, self.lat))),
-            'z': self.z,
+            "z": self.z,
             "l": self.layer,
-            'size': '650,450'
+            "size": '650,450',
         }
+        if self.point is not None:
+            map_params["pt"] = ",".join(map(str, self.point)) + ",flag"
         image = BytesIO(get_static(**map_params))
         self.image = pygame.image.load(image)
 
@@ -61,7 +68,17 @@ class BigMap:
                 self.lat = min(self.lat + 70 * 2 ** (-self.z), 90)
             if event.key == pygame.K_DOWN:
                 self.lat = max(self.lat - 70 * 2 ** (-self.z), -90)
-            self.update_map()
+            if event.key == pygame.K_RETURN:
+                text = self.search_field.get_text()
+                if text:
+                    try:
+                        self.lon, self.lat = get_toponym_coord(get_toponym(geocode(text)))
+                        self.error_field.set_text('')
+                        self.point = self.lon, self.lat
+                    except IndexError:
+                        self.error_field.set_text("Ничего не найдено")
+            if event.key in KEYS:
+                self.update_map()
         self.manager.process_events(event)
 
     def gui_event_handler(self, event):
@@ -87,7 +104,7 @@ if __name__ == '__main__':
     clock = pygame.time.Clock()
     running = True
     while running:
-        time_delta = clock.tick(60) / 1000
+        time_delta = clock.tick(25) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False

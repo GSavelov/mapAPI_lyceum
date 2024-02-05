@@ -1,5 +1,4 @@
 import requests
-import math
 
 
 def get_static(**params):
@@ -8,8 +7,12 @@ def get_static(**params):
     return response.content
 
 
-def geocode(**params):
+def geocode(name):
     geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
+    params = {
+        "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+        "geocode": name,
+        "format": "json"}
     response = requests.get(geocoder_api_server, params=params)
 
     if not response:
